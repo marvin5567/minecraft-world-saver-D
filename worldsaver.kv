@@ -1,0 +1,130 @@
+#:kivy 1.0
+
+<ColoredBoxLayout>:
+    orientation: 'vertical'
+    padding: 100
+    spacing: 10
+    canvas.before:
+        Color:
+            rgba: 0.561, 0.8, 0.361, 1
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+<HomePage>:
+    ColoredBoxLayout:
+        Label:
+            text: 'Welcome to the Minecraft World Saver!'
+        GridLayout:
+            id: worldLayout
+            cols: 1
+            size_hint_y: None
+            height: self.minimum_height
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint: (1, None)
+            height: 50
+            spacing: 10
+            Button:
+                text: 'Select Minecraft Worlds Directory'
+                size_hint: (0.5, 1)
+                on_press: root.selectDirectory()
+            Button:
+                text: 'Logout'
+                size_hint: (0.5, 1)
+                on_press: root.logoutUser()
+            Button:
+                text: 'Output'
+                size_hint: (0.5, 1)
+                on_press: root.display_output()
+
+<WorldDetailsScreen>:
+    ColoredBoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+        canvas.before:
+            Color:
+                rgba: 0.561, 0.8, 0.361, 1
+            Rectangle:
+                size: self.size
+                pos: self.pos
+        Label:
+            text: "World Name: " + root.worldName
+            font_size: '20sp'
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: 10
+            size_hint_y: None
+            height: 50
+            Button:
+                text: "Download World"
+                size_hint: (None, None)
+                size: 200, 50
+                on_press: root.downloadWorld()
+            Button:
+                text: "Delete World"
+                size_hint: (None, None)
+                size: 200, 50
+                on_press: root.deleteWorld()
+            Button:
+                text: "Back"
+                size_hint: (None, None)
+                size: 200, 50
+                on_press: root.goBack()
+            
+
+<LoginScreen>:
+    ColoredBoxLayout:
+        Label:
+            text: 'Username'
+        TextInput:
+            id: username
+            multiline: False
+            size_hint: (1, 0.5)
+        Label:
+            text: 'Password'
+        TextInput:
+            id: password
+            password: True
+            multiline: False
+            size_hint: (1, 0.5)
+        Button:
+            text: 'Login'
+            size_hint: (1, 0.5)
+            on_press: root.validateUser()
+        Button:
+            text: 'Sign Up'
+            size_hint: (1, 0.5)
+            on_press: root.switchToSignupScreen()
+
+<SignUpScreen>:
+    ColoredBoxLayout:
+        Label:
+            text: 'Username'
+        TextInput:
+            id: username
+            multiline: False
+            size_hint: (1, 0.5)
+        Label:
+            text: 'Password'
+        TextInput:
+            id: password
+            password: True
+            multiline: False
+            size_hint: (1, 0.5)
+        Label:
+            text: 'Confirm Password'
+        TextInput:
+            id: confirmPassword
+            password: True
+            multiline: False
+            size_hint: (1, 0.5)
+        Button:
+            text: 'Sign Up'
+            size_hint: (1, 0.5)
+            on_press: root.add_user()
+        Button:
+            text: 'Back'
+            size_hint: (1, 0.5)
+            on_press: root.go_back()
