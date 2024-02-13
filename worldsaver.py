@@ -6,11 +6,11 @@ import hashlib
 import subprocess
 import sys
 from threading import Thread
-import asyncio
-import queue
 import time
+import io
 
 # database related imports
+import pymongo
 from bson import ObjectId
 from pymongo import MongoClient
 from gridfs import GridFS
@@ -24,6 +24,7 @@ from kivy.uix.popup import Popup
 from kivy.lang import Builder
 from kivy.graphics import Color, Rectangle
 from kivy.uix.gridlayout import GridLayout
+from kivy.properties import StringProperty
 
 from tkinter import filedialog
 from tkinter import Tk
@@ -37,10 +38,18 @@ class HomePage(BoxLayout):
     def __init__(self, **kwargs):
         super(HomePage, self).__init__(**kwargs)
         self.defaultDir = r"C:\Users\Owner\AppData\Roaming\.minecraft\saves"
-        self.currentUserId = None  # To be set after login
+        self.currentUserId = self.readUserID()  # To be set after login
+        self.upload_queue = Queue()
         self.upload_thread = Thread(target=self.process_upload_queue)
         self.upload_thread.daemon = True
         self.upload_thread.start()
+
+    def readUserID(self):
+            try:
+                with open("currentUserId.txt", "r") as file:
+                    return file.read().strip()
+            except FileNotFoundError:
+                return None
 
     def display_output(self):
         if sys.platform == "win32":
@@ -250,7 +259,8 @@ class HomePage(BoxLayout):
             worldData = app.db.worlds.find_one({'name': worldName, 'user_id': self.currentUserId})
 
             if worldData:
-                world_details_screen = WorldDetailsScreen(worldName=worldName, worldData=worldData)
+                world_details_screen = WorldDetailsScreen(worldName=worldName)  # Pass worldName argument
+                world_details_screen.worldData = worldData  # Set worldData as an attribute
 
                 # clear existing widgets and add the new world details screen
                 app.root.clear_widgets()
@@ -260,10 +270,16 @@ class HomePage(BoxLayout):
         except Exception as e:
             print(f"Error loading uploaded world: {e}")
 
+
+
+
+
 class WorldDetailsScreen(BoxLayout):
-    def __init__(self, worldName, **kwargs):
+    worldName = StringProperty("")  # Add worldName attribute
+
+    def __init__(self, **kwargs):
         super(WorldDetailsScreen, self).__init__(**kwargs)
-        self.worldName = worldName
+        self.worldName = kwargs.get('worldName', '')  # Set worldName if provided
 
     def downloadWorld(self, worldData, worldName):
         print(f"Downloading world '{self.worldName}'...")
@@ -332,8 +348,8 @@ class WorldDetailsScreen(BoxLayout):
             print(f"Error deleting world: {e}")
 
     def goBack(self):
-        self.parent.clear_widgets()
-        self.parent.add_widget(HomePage())
+        App.get_running_app().root.clear_widgets()
+        App.get_running_app().root.add_widget(HomePage())
 
 class LoginScreen(BoxLayout):
     def __init__(self, **kwargs):
