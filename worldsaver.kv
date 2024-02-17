@@ -61,12 +61,12 @@
                 text: "Download World"
                 size_hint: (None, None)
                 size: 200, 50
-                on_press: root.downloadWorld(root.worldName, root.worldData)
+                on_press: root.downloadWorld(root.worldData, root.worldName)
             Button:
                 text: "Delete World"
                 size_hint: (None, None)
                 size: 200, 50
-                on_press: root.deleteWorld()
+                on_press: root.deleteWorld(root.worldName)
             Button:
                 text: "Back"
                 size_hint: (None, None)
