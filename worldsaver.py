@@ -26,6 +26,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.uix.gridlayout import GridLayout
 from kivy.properties import StringProperty
 
+import tkinter as tk
 from tkinter import filedialog
 from tkinter import Tk
 
@@ -43,6 +44,13 @@ class HomePage(BoxLayout):
         self.upload_thread = Thread(target=self.process_upload_queue)
         self.upload_thread.daemon = True
         self.upload_thread.start()
+
+    def show_output(output):
+        window = tk.Toplevel()
+        window.title("App Output")
+
+        label = tk.Label(window, text=output)
+        label.pack()
 
     def readUserID(self):
             try:
@@ -89,7 +97,7 @@ class HomePage(BoxLayout):
 
     def process_upload_queue(self):
         while True:
-            if not self.upload_queue.empty():
+            if not self.upload_queue.is_empty():
                 worldName, worldPath = self.upload_queue.get()
                 try:
                     print(f"Uploading world '{worldName}' from {worldPath}...")
@@ -190,51 +198,6 @@ class HomePage(BoxLayout):
             
         self.displayWorlds()
 
-    # def uploadWorld(self, worldName, worldData, currentUserId):
-    #     print(f"Uploading world '{worldName}' with size {len(worldData)} bytes")
-
-    #     try:
-    #         # create a GridFS object
-    #         fs = GridFS(app.db, collection='worlds_fs')
-    #         print("packing p1 done")
-    #         # Chunk size for uploading (adjust as needed)
-    #         chunk_size = 1024 * 1024  # 1 MB
-    #         print("packing p2 done")
-    #         # Calculate the number of chunks
-    #         num_chunks = (len(worldData) + chunk_size - 1) // chunk_size
-    #         print("packing p3 done")
-    #         # Asynchronously upload chunks
-    #         tasks = []
-    #         print("packing p4 done")
-    #         for i in range(num_chunks):
-    #             chunk_start = i * chunk_size
-    #             chunk_end = min((i + 1) * chunk_size, len(worldData))
-    #             chunk_data = worldData[chunk_start:chunk_end]
-    #             tasks.append(self.upload_chunk(fs, worldName, chunk_data))
-    #             print(f'loop iteration: {i}')
-            
-    #         print("loop done!")
-    #         print("await function done")
-
-    #         # Store metadata in the worlds collection
-    #         app.db.worlds.insert_one({'name': worldName, 'user_id': currentUserId})
-            
-    #         print(f"World '{worldName}' uploaded successfully.")
-    #     except Exception as e:
-    #         print(f"Error uploading world to GridFS: {e}")
-
-    #     self.displayWorlds()
-
-    '''
-    def uploadWorldButton(self, instance):
-        if isinstance(instance, Button):
-            worldName = instance.text
-            asyncio.create_task(self.uploadWorldButtonAsync(worldName))
-        else:
-            # Handle the case where instance is not a Button object
-            pass
-    '''
-
     def uploadWorldButton(self, worldName):
         worldPath = os.path.join(self.defaultDir, worldName)
 
@@ -265,13 +228,6 @@ class HomePage(BoxLayout):
         finally:
             # remove the temporary directory
             shutil.rmtree(tempDir, ignore_errors=True)
-
-    # def upload_chunk(self, fs, worldName, chunk_data):
-    #     # Upload a chunk of data
-    #     try:
-    #         file_id = fs.put(chunk_data, filename=worldName, chunk_size=len(chunk_data))
-    #     except Exception as e:
-    #         print(f"Error uploading chunk for '{worldName}': {e}")
 
     def loadUploadedWorld(self, worldName):
         try:
