@@ -3,7 +3,6 @@ import os
 import io
 import sys
 import time
-import output
 import shutil
 import hashlib
 import requests
@@ -40,29 +39,6 @@ TOKEN = 'mongodb+srv://karimabouelnour2006:Dwad2O3dnTWp9KaZ@minecraftworldsaver.
 # Load the KV file
 Builder.load_file("worldsaver.kv")
 
-class OutputWindow:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Output Window")
-
-        self.text_area = tk.Text(self.root, wrap=tk.WORD)
-        self.text_area.pack(fill=tk.BOTH, expand=True)
-
-    def display_message(self, message):
-        self.text_area.insert(tk.END, message + "\n")
-        self.text_area.see(tk.END)
-
-    def run(self):
-        self.root.mainloop()
-
-output_window = OutputWindow()
-
-def start_output_window():
-    output_window.run()
-
-def display_output(message):
-    output_window.display_message(message)
-
 class HomePage(BoxLayout):
     def __init__(self, **kwargs):
         super(HomePage, self).__init__(**kwargs)
@@ -80,21 +56,6 @@ class HomePage(BoxLayout):
                     return file.read().strip()
             except FileNotFoundError:
                 return None
-
-    def display_output(self):
-        message = "Your output message here"  # Replace with your actual output message
-        threading.Thread(target=display_output, args=(message,)).start()
-
-    # def display_output(self):
-    #     if sys.platform == "win32":
-    #         command = "start cmd"
-    #     elif sys.platform == "linux":
-    #         command = "gnome-terminal"
-    #     elif sys.platform == "darwin":
-    #         command = "open -a Terminal"
-    #     else:
-    #         raise ValueError("Unsupported platform: " + sys.platform)
-    #     Thread(target=lambda: subprocess.run(command, shell=True)).start()
 
     def selectDirectory(self):
         # Perform actions when the "Select Directory" button is pressed
@@ -475,6 +436,5 @@ class MainApp(App):
         return LoginScreen()
 
 if __name__ == '__main__':
-    threading.Thread(target=start_output_window).start()
     app = MainApp()
     app.run()
