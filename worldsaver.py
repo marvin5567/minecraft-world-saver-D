@@ -1,39 +1,67 @@
 # operating system imports
 import os
-import shutil
-import tempfile
-import hashlib
-import subprocess
-import sys
-from threading import Thread
-import time
 import io
+import sys
+import time
+import output
+import shutil
+import hashlib
+import requests
+import tempfile
+import threading
+import subprocess
+from threading import Thread
 
 # database related imports
 import pymongo
+from gridfs import GridFS
 from bson import ObjectId
 from pymongo import MongoClient
-from gridfs import GridFS
+
 
 # kivy imports
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
+from kivy.lang import Builder
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
-from kivy.lang import Builder
+from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout
+from kivy.properties import StringProperty
 from kivy.graphics import Color, Rectangle
 from kivy.uix.gridlayout import GridLayout
-from kivy.properties import StringProperty
 
 import tkinter as tk
-from tkinter import filedialog
 from tkinter import Tk
+from tkinter import filedialog
+
 
 TOKEN = 'mongodb+srv://karimabouelnour2006:Dwad2O3dnTWp9KaZ@minecraftworldsaver.wefidgi.mongodb.net/?retryWrites=true&w=majority'
 
 # Load the KV file
 Builder.load_file("worldsaver.kv")
+
+class OutputWindow:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Output Window")
+
+        self.text_area = tk.Text(self.root, wrap=tk.WORD)
+        self.text_area.pack(fill=tk.BOTH, expand=True)
+
+    def display_message(self, message):
+        self.text_area.insert(tk.END, message + "\n")
+        self.text_area.see(tk.END)
+
+    def run(self):
+        self.root.mainloop()
+
+output_window = OutputWindow()
+
+def start_output_window():
+    output_window.run()
+
+def display_output(message):
+    output_window.display_message(message)
 
 class HomePage(BoxLayout):
     def __init__(self, **kwargs):
@@ -43,14 +71,8 @@ class HomePage(BoxLayout):
         self.upload_queue = Queue()
         self.upload_thread = Thread(target=self.process_upload_queue)
         self.upload_thread.daemon = True
+        self.flask_thread = None  # Initialize the Flask thread
         self.upload_thread.start()
-
-    def show_output(output):
-        window = tk.Toplevel()
-        window.title("App Output")
-
-        label = tk.Label(window, text=output)
-        label.pack()
 
     def readUserID(self):
             try:
@@ -60,15 +82,19 @@ class HomePage(BoxLayout):
                 return None
 
     def display_output(self):
-        if sys.platform == "win32":
-            command = "start cmd"
-        elif sys.platform == "linux":
-            command = "gnome-terminal"
-        elif sys.platform == "darwin":
-            command = "open -a Terminal"
-        else:
-            raise ValueError("Unsupported platform: " + sys.platform)
-        Thread(target=lambda: subprocess.run(command, shell=True)).start()
+        message = "Your output message here"  # Replace with your actual output message
+        threading.Thread(target=display_output, args=(message,)).start()
+
+    # def display_output(self):
+    #     if sys.platform == "win32":
+    #         command = "start cmd"
+    #     elif sys.platform == "linux":
+    #         command = "gnome-terminal"
+    #     elif sys.platform == "darwin":
+    #         command = "open -a Terminal"
+    #     else:
+    #         raise ValueError("Unsupported platform: " + sys.platform)
+    #     Thread(target=lambda: subprocess.run(command, shell=True)).start()
 
     def selectDirectory(self):
         # Perform actions when the "Select Directory" button is pressed
@@ -449,5 +475,6 @@ class MainApp(App):
         return LoginScreen()
 
 if __name__ == '__main__':
+    threading.Thread(target=start_output_window).start()
     app = MainApp()
     app.run()
