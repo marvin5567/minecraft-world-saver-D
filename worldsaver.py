@@ -12,7 +12,6 @@ from gridfs import GridFS
 from bson import ObjectId
 from pymongo import MongoClient
 
-
 # kivy imports
 from kivy.app import App
 from kivy.lang import Builder
@@ -24,7 +23,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 from kivy.graphics import Color, Rectangle
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.filechooser import FileChooser
+
 
 from tkinter import Tk
 from tkinter import filedialog
@@ -328,6 +327,7 @@ class LoginScreen(BoxLayout):
         super(LoginScreen, self).__init__(**kwargs)
 
     def validateUser(self):
+        global user
         user = self.ids.username.text
         password = self.ids.password.text
 
@@ -399,8 +399,8 @@ class SignUpScreen(BoxLayout):
             popup.open()
 
     def go_back(self):
-        self.parent.clear_widgets()
-        self.parent.add_widget(LoginScreen())
+        App.get_running_app().root.clear_widgets()
+        App.get_running_app().root.add_widget(LoginScreen())
 
 class AdditionalInfoScreen(Screen):
     def __init__(self, **kwargs):
@@ -441,6 +441,7 @@ class AdditionalInfoScreen(Screen):
     def submitAdditionalInfo(self):
         # Retrieve additional information from input fields
         name = self.ids.name_input.text
+        global age
         age = self.ids.age_input.text
 
         # Assuming you have a MongoDB collection called 'users'
@@ -460,14 +461,14 @@ class AdditionalInfoScreen(Screen):
                 app.db.users.update({'_id': self.readUserID()}, {'age': age})
                 print(f'Now entering age: {str(age)}')
 
-            print("before image if")
+
             if image_data == '':
-                print("image phase twp")
+             
                 with open(defImgPath, 'rb') as f:
                     def_image_data = f.read()
                     print("Data accessed successfully!")
 
-                print("image phase three")
+
                 file_id = self.fs.put(def_image_data, filename=os.path.basename(defImgPath))
                 print(f"Profile picture data uploaded successfully. File ID: {file_id}")
 
@@ -493,12 +494,64 @@ class AdditionalInfoScreen(Screen):
 class UserDashboard(BoxLayout):
     def goToAccountDetails(self):
         print("Navigating to Account Details")
-        # Placeholder for navigation logic
+        # App.get_running_app().root.clear_widgets()
+        # App.get_running_app().root.add_widget(AccountDetails())
         
     def goToSettings(self):
         print("Navigating to Settings")
         # Placeholder for navigation logic
+    
+    def goBack(self):
+        App.get_running_app().root.clear_widgets()
+        App.get_running_app().root.add_widget(HomePage())
 
+# class AccountDetails(BoxLayout):
+#     def __init__(self, user_data=None, **kwargs):
+#         super(AccountDetails, self).__init__(**kwargs)
+#         if user_data:
+#             self.ids.username_label.text = f"Username: {user_data.get('username', '')}"
+#             self.ids.age_label.text = f"Age: {user_data.get('age', '')}"
+#             # Load profile picture if available
+#             self.load_profile_picture(user_data.get('profile_picture', ''))
+
+#     def load_profile_picture(self, file_id):
+#         if file_id:
+#             # Load profile picture based on file_id
+#             try:
+#                 fs = GridFS(app.db, collection='profile_pictures')
+#                 profile_picture_data = fs.get(ObjectId(file_id)).read()
+#                 # Display profile picture
+#                 self.ids.profile_image.texture = CoreImage(BytesIO(profile_picture_data), ext="png").texture
+#             except Exception as e:
+#                 print(f"Error loading profile picture: {e}")
+
+#     def goBack(self):
+#         App.get_running_app().root.clear_widgets()
+#         App.get_running_app().root.add_widget(UserDashboard())
+
+    
+#     def readUserID(self):
+#             try:
+#                 with open("currentUserId.txt", "r") as file:
+#                     return file.read().strip()
+#             except FileNotFoundError:
+#                 return None
+        
+#     def changeAdditionalDetails(self):
+#         print("Changing additional account details")
+#         # Placeholder for changing additional details logic
+
+#     def deleteAccount(self):
+#         print("Deleting account")
+#         # Placeholder for deleting account logic
+
+#     def deleteAllData(self):
+#         print("Deleting all data")
+#         # Placeholder for deleting all data logic
+
+#     def goBack(self):
+#         App.get_running_app().root.clear_widgets()
+#         App.get_running_app().root.add_widget(UserDashboard())
 
 class ColoredBoxLayout(BoxLayout):
     def __init__(self, **kwargs):

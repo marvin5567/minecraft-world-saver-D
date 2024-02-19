@@ -173,3 +173,49 @@
             text: 'Settings'
             size_hint: (1, 0.2)
             on_press: root.goToSettings()
+        
+        Button:
+            text: "Back"
+            on_press: root.goBack()
+
+<AccountDetails>:
+    ColoredBoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+        # Username
+        Label:
+            id: username_label
+            font_size: '20sp'
+        
+        Image:
+            id: profile_image
+            source: "./resc/images/defaultPFP.jpg"  # Placeholder source
+            size_hint: (1, 0.5)
+
+        # Age
+        Label:
+            id: age_label
+            font_size: '20sp'
+
+        # Buttons
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: 10
+            size_hint: (1, 0.1)
+
+            Button:
+                text: "Change Additional Details"
+                on_press: root.changeAdditionalDetails()
+
+            Button:
+                text: "Delete Account"
+                on_press: root.deleteAccount()
+
+            Button:
+                text: "Delete All Data"
+                on_press: root.deleteAllData()
+            
+            Button:
+                text: "Back"
+                on_press: root.goBack()
