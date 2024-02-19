@@ -31,6 +31,8 @@ from tkinter import filedialog
 
 
 TOKEN = 'mongodb+srv://karimabouelnour2006:Dwad2O3dnTWp9KaZ@minecraftworldsaver.wefidgi.mongodb.net/?retryWrites=true&w=majority'
+image_data = ''
+defImgPath = './resc/images/defaultPFP.jpg'
 
 # Load the KV file
 Builder.load_file("worldsaver.kv")
@@ -427,7 +429,6 @@ class AdditionalInfoScreen(Screen):
 
             try:
                 with open(picFilePath, 'rb') as f:
-                    global image_data
                     image_data = f.read()
                     print("Data accessed successfully!")
                 
@@ -445,13 +446,42 @@ class AdditionalInfoScreen(Screen):
         # Assuming you have a MongoDB collection called 'users'
         # Update the user's document with the additional information
         try:
-            file_id = self.fs.put(image_data, filename=os.path.basename(picFilePath))
-            print(f"Profile picture data uploaded successfully. File ID: {file_id}")
+            if name == '':
+                app.db.users.update({'_id': self.readUserID()}, {'name': ''})
+                print(f'Now entering age: none')
+            else:
+                app.db.users.update({'_id': self.readUserID()}, {'name': name})
+                print(f'Now entering age: {str(name)}')
 
-            app.db.pfps.insert_one({'user_id': self.readUserID(), 'file_id': file_id})
-            print(f"Profile picture meta data uploaded succesfully. File ID: {file_id}")
+            if age == '':
+                app.db.users.update({'_id': self.readUserID()}, {'age': ''})
+                print(f'Now entering age: none')
+            else:
+                app.db.users.update({'_id': self.readUserID()}, {'age': age})
+                print(f'Now entering age: {str(age)}')
 
-            app.db.users.update({'_id': self.readUserID()}, {'$set': {'name': name, 'age': age}})
+            print("before image if")
+            if image_data == '':
+                print("image phase twp")
+                with open(defImgPath, 'rb') as f:
+                    def_image_data = f.read()
+                    print("Data accessed successfully!")
+
+                print("image phase three")
+                file_id = self.fs.put(def_image_data, filename=os.path.basename(defImgPath))
+                print(f"Profile picture data uploaded successfully. File ID: {file_id}")
+
+                app.db.pfps.insert_one({'user_id': self.readUserID(), 'file_id': file_id})
+                print(f"Profile picture meta data uploaded succesfully. File ID: {file_id}")
+
+            else:
+                file_id = self.fs.put(image_data, filename=os.path.basename(picFilePath))
+                print(f"Profile picture data uploaded successfully. File ID: {file_id}")
+
+                app.db.pfps.insert_one({'user_id': self.readUserID(), 'file_id': file_id})
+                print(f"Profile picture meta data uploaded succesfully. File ID: {file_id}")
+
+            # app.db.users.update({'_id': self.readUserID()}, {'$set': {'name': name, 'age': age}})
             print("All Additional information submitted successfully!")
 
             App.get_running_app().root.clear_widgets()
@@ -461,7 +491,14 @@ class AdditionalInfoScreen(Screen):
             print(f"Error submitting additional information: {e}")
 
 class UserDashboard(BoxLayout):
-    pass
+    def goToAccountDetails(self):
+        print("Navigating to Account Details")
+        # Placeholder for navigation logic
+        
+    def goToSettings(self):
+        print("Navigating to Settings")
+        # Placeholder for navigation logic
+
 
 class ColoredBoxLayout(BoxLayout):
     def __init__(self, **kwargs):
