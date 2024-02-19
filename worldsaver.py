@@ -1,18 +1,13 @@
 # operating system imports
 import os
-import io
-import sys
 import time
 import shutil
 import hashlib
-import requests
 import tempfile
 import threading
-import subprocess
 from threading import Thread
 
 # database related imports
-import pymongo
 from gridfs import GridFS
 from bson import ObjectId
 from pymongo import MongoClient
@@ -25,11 +20,12 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 from kivy.graphics import Color, Rectangle
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.filechooser import FileChooser
 
-import tkinter as tk
 from tkinter import Tk
 from tkinter import filedialog
 
@@ -85,9 +81,9 @@ class HomePage(BoxLayout):
     def process_upload_queue(self):
         while True:
             if not self.upload_queue.is_empty():
-                worldName, worldPath = self.upload_queue.get()
+                worldName, worldPath = self.upload_queue.dequeue()  # Dequeue item from the queue
                 try:
-                    print(f"Uploading world '{worldName}' from {worldPath}...")
+                    print(f"Processing upload queue: '{worldName}' from {worldPath}...")
                     # Simulate upload process
                     time.sleep(2)
                     print(f"World '{worldName}' uploaded successfully.")
@@ -188,6 +184,9 @@ class HomePage(BoxLayout):
     def uploadWorldButton(self, worldName):
         worldPath = os.path.join(self.defaultDir, worldName)
 
+        print("Enqueuing world:", worldName)  # Print when enqueuing
+        self.upload_queue.enqueue((worldName, worldPath))  # Enqueue world information
+
         print("packing sqeuence initiated")
         try:
             # make a temp directory
@@ -232,6 +231,11 @@ class HomePage(BoxLayout):
                 print(f"Error: Uploaded world data not found for '{worldName}'")
         except Exception as e:
             print(f"Error loading uploaded world: {e}")
+
+    def switchToUserDashboard(self):
+        user_dashboard = UserDashboard()
+        self.clear_widgets()
+        self.add_widget(user_dashboard)
 
 class WorldDetailsScreen(BoxLayout):
     worldName = StringProperty("")  # Add worldName attribute
@@ -339,6 +343,7 @@ class LoginScreen(BoxLayout):
             # Switch pages
             App.get_running_app().root.clear_widgets()
             App.get_running_app().root.add_widget(HomePage())
+
         else:
             # If it doesn't exist, display an error message
             popup = Popup(title='Invalid Login', content=Label(text='Invalid username or password'),
@@ -352,6 +357,7 @@ class LoginScreen(BoxLayout):
 class SignUpScreen(BoxLayout):
     def __init__(self, **kwargs):
         super(SignUpScreen, self).__init__(**kwargs)
+        self.fs = GridFS(app.db, collection='profile_pictures')
 
     def add_user(self):
         user = self.ids.username.text
@@ -372,11 +378,15 @@ class SignUpScreen(BoxLayout):
                 hashedPassword = hashlib.sha256(password.encode()).hexdigest()
 
                 # Add the new user to the database
-                app.db.users.insert_one({'username': user, 'password': hashedPassword})
+                app.db.users.insert_one({'username': user, 'password': hashedPassword, 'age':'', 'name':''})
+                session = app.db.users.find_one({'username': user, 'password': hashedPassword})
+
+                with open("currentUserId.txt", "w") as file:
+                    file.write(str(session['_id']))
 
                 print("User added")
                 App.get_running_app().root.clear_widgets()
-                App.get_running_app().root.add_widget(HomePage())
+                App.get_running_app().root.add_widget(AdditionalInfoScreen())
             else:
                 popup = Popup(title='Sign Up Error', content=Label(text='Passwords do not match'),
                               size_hint=(None, None), size=(400, 400))
@@ -389,6 +399,69 @@ class SignUpScreen(BoxLayout):
     def go_back(self):
         self.parent.clear_widgets()
         self.parent.add_widget(LoginScreen())
+
+class AdditionalInfoScreen(Screen):
+    def __init__(self, **kwargs):
+        super(AdditionalInfoScreen, self).__init__(**kwargs)
+        self.fs = GridFS(app.db, collection='profile_pictures')
+
+    def readUserID(self):
+            try:
+                with open("currentUserId.txt", "r") as file:
+                    return file.read().strip()
+            except FileNotFoundError:
+                return None
+
+    def uploadProfilePicture(self):
+        root = Tk()
+        root.withdraw()
+
+        global picFilePath
+        picFilePath = filedialog.askopenfilename(initialdir=".", title="Select Profile Picture",
+                                               filetypes=(("Image files", "*.jpg;*.png;*.jpeg"), ("All files", "*.*")))
+
+        root.destroy()
+
+        if picFilePath:
+            print(f"Selected file: {picFilePath}")
+
+            try:
+                with open(picFilePath, 'rb') as f:
+                    global image_data
+                    image_data = f.read()
+                    print("Data accessed successfully!")
+                
+
+            except Exception as e:
+                print(f"Error uploading profile picture: {e}")
+        else:
+            print("No file selected")
+
+    def submitAdditionalInfo(self):
+        # Retrieve additional information from input fields
+        name = self.ids.name_input.text
+        age = self.ids.age_input.text
+
+        # Assuming you have a MongoDB collection called 'users'
+        # Update the user's document with the additional information
+        try:
+            file_id = self.fs.put(image_data, filename=os.path.basename(picFilePath))
+            print(f"Profile picture data uploaded successfully. File ID: {file_id}")
+
+            app.db.pfps.insert_one({'user_id': self.readUserID(), 'file_id': file_id})
+            print(f"Profile picture meta data uploaded succesfully. File ID: {file_id}")
+
+            app.db.users.update({'_id': self.readUserID()}, {'$set': {'name': name, 'age': age}})
+            print("All Additional information submitted successfully!")
+
+            App.get_running_app().root.clear_widgets()
+            App.get_running_app().root.add_widget(HomePage())
+
+        except Exception as e:
+            print(f"Error submitting additional information: {e}")
+
+class UserDashboard(BoxLayout):
+    pass
 
 class ColoredBoxLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -407,17 +480,23 @@ class Queue:
         self.items = []
         
     def is_empty(self):
-        print("is empty active")
+        if self.items:
+            print("is empty active")
+            print("Queue length:", len(self.items))  # Print queue length for debugging
+            print("Thread ID:", threading.get_ident())  # Print thread ID for debugging
         return len(self.items) == 0
-        
+    
     def enqueue(self, item):
         print("enqueue")
         self.items.append(item)
 
     def dequeue(self):
         print("dequeue")
-        if not self.is_empty():
-            return self.items.pop(0)
+        if self.items:
+            item = self.items.pop(0)
+            print("Queue length:", len(self.items))  # Print queue length for debugging
+            print("Thread ID:", threading.get_ident())  # Print thread ID for debugging
+            return item
 
     def peek(self):
         print("peek")

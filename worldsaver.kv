@@ -36,7 +36,7 @@
             Button:
                 text: 'User Dashboard'
                 size_hint: (0.5, 1)
-                on_press: root.display_output()
+                on_press: root.switchToUserDashboard()
 
 <WorldDetailsScreen>:
     ColoredBoxLayout:
@@ -128,3 +128,38 @@
             text: 'Back'
             size_hint: (1, 0.5)
             on_press: root.go_back()
+
+<AdditionalInfoScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+
+        Label:
+            text: "Additional Information"
+            font_size: '20sp'
+
+        Label:
+            text: "Name:"
+        TextInput:
+            id: name_input
+
+        Label:
+            text: "Age:"
+        TextInput:
+            id: age_input
+
+        Label:
+            text: "Upload Profile Picture:"
+        Button:
+            text: "Upload"
+            on_press: root.uploadProfilePicture()
+
+        Button:
+            text: "Submit"
+            on_press: root.submitAdditionalInfo()
+
+<UserDashboard>:
+    orientation: 'vertical'
+    Label:
+        text: 'User dashboard'
