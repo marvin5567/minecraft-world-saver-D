@@ -1,10 +1,12 @@
 # operating system imports
 import os
 import time
+import json
 import shutil
 import hashlib
 import tempfile
 import threading
+import configparser
 from threading import Thread
 
 # database related imports
@@ -23,7 +25,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 from kivy.graphics import Color, Rectangle
 from kivy.uix.gridlayout import GridLayout
-
+from kivy.properties import StringProperty, NumericProperty
 
 from tkinter import Tk
 from tkinter import filedialog
@@ -163,7 +165,8 @@ class HomePage(BoxLayout):
         return grid_layout
     
     def uploadWorld(self, worldName, worldData, currentUserId):
-        print(f"Uploading world '{worldName}' with size {len(worldData)} bytes")
+        print(f"Uploading world: '{worldName}'")
+        print(f"Size: {len(worldData) * 0.000001} MB")
 
         try:
             # Create a GridFS object
@@ -233,10 +236,9 @@ class HomePage(BoxLayout):
         except Exception as e:
             print(f"Error loading uploaded world: {e}")
 
-    def switchToUserDashboard(self):
-        user_dashboard = UserDashboard()
-        self.clear_widgets()
-        self.add_widget(user_dashboard)
+    def switchToSettings(self):
+        App.get_running_app().root.clear_widgets()
+        App.get_running_app().root.add_widget(SettingsScreen())
 
 class WorldDetailsScreen(BoxLayout):
     worldName = StringProperty("")  # Add worldName attribute
@@ -271,7 +273,7 @@ class WorldDetailsScreen(BoxLayout):
                 zip_file.write(file_data)
 
             # Specify the target directory for downloading (adjust as needed)
-            downloadDir = r"C:\Users\Owner\Downloads"
+            downloadDir = SettingsScreen.loadDownladDir()
 
             # Copy the zip file to the target directory
             shutil.copy(tempZipPath, os.path.join(downloadDir, f"{worldName}.zip"))
@@ -388,7 +390,7 @@ class SignUpScreen(BoxLayout):
 
                 print("User added")
                 App.get_running_app().root.clear_widgets()
-                App.get_running_app().root.add_widget(AdditionalInfoScreen())
+                App.get_running_app().root.add_widget(HomePage())
             else:
                 popup = Popup(title='Sign Up Error', content=Label(text='Passwords do not match'),
                               size_hint=(None, None), size=(400, 400))
@@ -402,162 +404,106 @@ class SignUpScreen(BoxLayout):
         App.get_running_app().root.clear_widgets()
         App.get_running_app().root.add_widget(LoginScreen())
 
-class AdditionalInfoScreen(Screen):
-    def __init__(self, **kwargs):
-        super(AdditionalInfoScreen, self).__init__(**kwargs)
-        self.fs = GridFS(app.db, collection='profile_pictures')
+class SettingsScreen(Screen):
+    themeColor = StringProperty()
+    defaultDownloadDir = ''
 
-    def readUserID(self):
-            try:
-                with open("currentUserId.txt", "r") as file:
-                    return file.read().strip()
-            except FileNotFoundError:
-                return None
-
-    def uploadProfilePicture(self):
+    def selectDirectory(self):
+        # Perform actions when the "Select Directory" button is pressed
         root = Tk()
         root.withdraw()
 
-        global picFilePath
-        picFilePath = filedialog.askopenfilename(initialdir=".", title="Select Profile Picture",
-                                               filetypes=(("Image files", "*.jpg;*.png;*.jpeg"), ("All files", "*.*")))
-
+        directory = filedialog.askdirectory(initialdir=self.defaultDownloadDir, title="Select Download Directory")
         root.destroy()
 
-        if picFilePath:
-            print(f"Selected file: {picFilePath}")
-
-            try:
-                with open(picFilePath, 'rb') as f:
-                    image_data = f.read()
-                    print("Data accessed successfully!")
-                
-
-            except Exception as e:
-                print(f"Error uploading profile picture: {e}")
+        if directory:
+            print(f"Selected directory: {directory}")
+            self.defaultDownloadDir = directory
         else:
-            print("No file selected")
+            print("No directory selected")
 
-    def submitAdditionalInfo(self):
-        # Retrieve additional information from input fields
-        name = self.ids.name_input.text
-        global age
-        age = self.ids.age_input.text
+    def saveChanges(self):
+        if self.ids.theme_color_input.text != '':
 
-        # Assuming you have a MongoDB collection called 'users'
-        # Update the user's document with the additional information
-        try:
-            if name == '':
-                app.db.users.update({'_id': self.readUserID()}, {'name': ''})
-                print(f'Now entering age: none')
+            if not isinstance(self.ids.theme_color_input.text, str) or len(self.ids.theme_color_input.text) != 7 or not all(c in '0123456789abcdefABCDEF' for c in self.ids.theme_color_input.text[1:]):
+                popup = Popup(title='Parsing Error', content=Label(text='Invalid hex code format'),
+                              size_hint=(None, None), size=(400, 400))
+                popup.open()
+            
             else:
-                app.db.users.update({'_id': self.readUserID()}, {'name': name})
-                print(f'Now entering age: {str(name)}')
+                with open("settings.json", "r") as f:
+                    settings_data = json.load(f)
 
-            if age == '':
-                app.db.users.update({'_id': self.readUserID()}, {'age': ''})
-                print(f'Now entering age: none')
-            else:
-                app.db.users.update({'_id': self.readUserID()}, {'age': age})
-                print(f'Now entering age: {str(age)}')
+                # Update a specific key
+                settings_data["themeColor"] = self.ids.theme_color_input.text
 
+                # Write the updated data back to the file
+                with open("settings.json", "w") as f:
+                    json.dump(settings_data, f, indent=4)
+        else:
+            pass
 
-            if image_data == '':
-             
-                with open(defImgPath, 'rb') as f:
-                    def_image_data = f.read()
-                    print("Data accessed successfully!")
+        if self.defaultDownloadDir != '':
+            with open("settings.json", "r") as f:
+                settings_data = json.load(f)
 
+            # Update a specific key
+            settings_data["defaultDownloadsDirectory"] = self.defaultDownloadDir
 
-                file_id = self.fs.put(def_image_data, filename=os.path.basename(defImgPath))
-                print(f"Profile picture data uploaded successfully. File ID: {file_id}")
+            # Write the updated data back to the file
+            with open("settings.json", "w") as f:
+                json.dump(settings_data, f, indent=4)
+        else:
+            pass
 
-                app.db.pfps.insert_one({'user_id': self.readUserID(), 'file_id': file_id})
-                print(f"Profile picture meta data uploaded succesfully. File ID: {file_id}")
-
-            else:
-                file_id = self.fs.put(image_data, filename=os.path.basename(picFilePath))
-                print(f"Profile picture data uploaded successfully. File ID: {file_id}")
-
-                app.db.pfps.insert_one({'user_id': self.readUserID(), 'file_id': file_id})
-                print(f"Profile picture meta data uploaded succesfully. File ID: {file_id}")
-
-            # app.db.users.update({'_id': self.readUserID()}, {'$set': {'name': name, 'age': age}})
-            print("All Additional information submitted successfully!")
-
-            App.get_running_app().root.clear_widgets()
-            App.get_running_app().root.add_widget(HomePage())
-
-        except Exception as e:
-            print(f"Error submitting additional information: {e}")
-
-class UserDashboard(BoxLayout):
-    def goToAccountDetails(self):
-        print("Navigating to Account Details")
-        # App.get_running_app().root.clear_widgets()
-        # App.get_running_app().root.add_widget(AccountDetails())
-        
-    def goToSettings(self):
-        print("Navigating to Settings")
-        # Placeholder for navigation logic
+    def loadThemeColor(*self):
+        # Load data from JSON file
+        with open('settings.json', 'r') as file:
+            data = json.load(file)
+        return data['themeColor']
+    
+    def loadDownladDir(*self):
+        # Load data from JSON file
+        with open('settings.json', 'r') as file:
+            data = json.load(file)
+            print(data['defaultDownloadsDirectory'])
+        # Return the font size
+        return data['defaultDownloadsDirectory']
     
     def goBack(self):
         App.get_running_app().root.clear_widgets()
         App.get_running_app().root.add_widget(HomePage())
 
-# class AccountDetails(BoxLayout):
-#     def __init__(self, user_data=None, **kwargs):
-#         super(AccountDetails, self).__init__(**kwargs)
-#         if user_data:
-#             self.ids.username_label.text = f"Username: {user_data.get('username', '')}"
-#             self.ids.age_label.text = f"Age: {user_data.get('age', '')}"
-#             # Load profile picture if available
-#             self.load_profile_picture(user_data.get('profile_picture', ''))
-
-#     def load_profile_picture(self, file_id):
-#         if file_id:
-#             # Load profile picture based on file_id
-#             try:
-#                 fs = GridFS(app.db, collection='profile_pictures')
-#                 profile_picture_data = fs.get(ObjectId(file_id)).read()
-#                 # Display profile picture
-#                 self.ids.profile_image.texture = CoreImage(BytesIO(profile_picture_data), ext="png").texture
-#             except Exception as e:
-#                 print(f"Error loading profile picture: {e}")
-
-#     def goBack(self):
-#         App.get_running_app().root.clear_widgets()
-#         App.get_running_app().root.add_widget(UserDashboard())
-
-    
-#     def readUserID(self):
-#             try:
-#                 with open("currentUserId.txt", "r") as file:
-#                     return file.read().strip()
-#             except FileNotFoundError:
-#                 return None
-        
-#     def changeAdditionalDetails(self):
-#         print("Changing additional account details")
-#         # Placeholder for changing additional details logic
-
-#     def deleteAccount(self):
-#         print("Deleting account")
-#         # Placeholder for deleting account logic
-
-#     def deleteAllData(self):
-#         print("Deleting all data")
-#         # Placeholder for deleting all data logic
-
-#     def goBack(self):
-#         App.get_running_app().root.clear_widgets()
-#         App.get_running_app().root.add_widget(UserDashboard())
+    def on_enter(self, *args):
+        # Load settings data when the screen is entered
+        self.loadSettings()
 
 class ColoredBoxLayout(BoxLayout):
+    def loadThemeColor(self):
+            # Load data from JSON file
+            with open('settings.json', 'r') as file:
+                data = json.load(file)
+        
+            def hex_to_rgb(hex_color):
+                if not isinstance(hex_color, str) or len(hex_color) != 7 or not all(c in '0123456789abcdefABCDEF' for c in hex_color[1:]):
+                    raise ValueError(f"'{hex_color}' is not a valid hex color code")
+
+                hex_color = hex_color.lstrip("#")  # Remove the '#' prefix if present
+                return list(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+            # Example usage
+            color = hex_to_rgb(data['themeColor'])
+            kivycolour = []
+            
+            for i in range(len(color)):
+                kivycolour.append(color[i]/255)
+            kivycolour.append('1')
+
+            return kivycolour
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         with self.canvas.before:
-            Color(0.561, 0.8, 0.361, 1)  # set the color to green
+            Color(self.loadThemeColor())  # set the color to green
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
@@ -598,7 +544,9 @@ class Queue:
         return len(self.items)
 
 class MainApp(App):
+
     def build(self):
+        self.config = self.load_config()
         self.client = MongoClient(TOKEN)
         self.db = self.client['minecraft_worlds']
         self.users = self.db.users

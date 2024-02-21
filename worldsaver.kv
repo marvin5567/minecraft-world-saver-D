@@ -1,4 +1,5 @@
 #:kivy 1.0
+# import app kivy.app.app
 
 <ColoredBoxLayout>:
     orientation: 'vertical'
@@ -6,7 +7,7 @@
     spacing: 10
     canvas.before:
         Color:
-            rgba: 0.561, 0.8, 0.361, 1
+            rgba: root.loadThemeColor()
         Rectangle:
             size: self.size
             pos: self.pos
@@ -34,9 +35,9 @@
                 size_hint: (0.5, 1)
                 on_press: root.logoutUser()
             Button:
-                text: 'User Dashboard'
+                text: 'Settings'
                 size_hint: (0.5, 1)
-                on_press: root.switchToUserDashboard()
+                on_press: root.switchToSettings()
 
 <WorldDetailsScreen>:
     ColoredBoxLayout:
@@ -44,8 +45,6 @@
         padding: 10
         spacing: 10
         canvas.before:
-            Color:
-                rgba: 0.561, 0.8, 0.361, 1
             Rectangle:
                 size: self.size
                 pos: self.pos
@@ -129,93 +128,34 @@
             size_hint: (1, 0.5)
             on_press: root.go_back()
 
-<AdditionalInfoScreen>:
+<SettingsScreen>:
     ColoredBoxLayout:
         orientation: 'vertical'
         padding: 20
         spacing: 10
 
         Label:
-            text: "Additional Information"
+            text: "Settings"
             font_size: '20sp'
 
         Label:
-            text: "Name:"
+            text: "Theme Color (set to: " + root.loadThemeColor() + "):"
         TextInput:
-            id: name_input
+            id: theme_color_input
+            multiline: False
+            size_hint: (1, 0.5)
 
         Label:
-            text: "Age:"
-        TextInput:
-            id: age_input
-
-        Label:
-            text: "Upload Profile Picture:"
+            text: "Default Downloads Directory (" + root.loadDownladDir() + "):"
         Button:
-            text: "Upload"
-            on_press: root.uploadProfilePicture()
+            id: default_worlds_dir_input
+            size_hint: (1, 0.5)
+            on_press: root.selectDirectory()
 
         Button:
-            text: "Submit"
-            on_press: root.submitAdditionalInfo()
+            text: "Save Changes"
+            on_press: root.saveChanges()
 
-<UserDashboard>:
-    ColoredBoxLayout:
-        Label:
-            text: 'User dashboard'
-        
-        Button:
-            text: 'Account Details'
-            size_hint: (1, 0.2)
-            on_press: root.goToAccountDetails()
-        
-        Button:
-            text: 'Settings'
-            size_hint: (1, 0.2)
-            on_press: root.goToSettings()
-        
         Button:
             text: "Back"
             on_press: root.goBack()
-
-<AccountDetails>:
-    ColoredBoxLayout:
-        orientation: 'vertical'
-        padding: 20
-        spacing: 10
-        # Username
-        Label:
-            id: username_label
-            font_size: '20sp'
-        
-        Image:
-            id: profile_image
-            source: "./resc/images/defaultPFP.jpg"  # Placeholder source
-            size_hint: (1, 0.5)
-
-        # Age
-        Label:
-            id: age_label
-            font_size: '20sp'
-
-        # Buttons
-        BoxLayout:
-            orientation: 'horizontal'
-            spacing: 10
-            size_hint: (1, 0.1)
-
-            Button:
-                text: "Change Additional Details"
-                on_press: root.changeAdditionalDetails()
-
-            Button:
-                text: "Delete Account"
-                on_press: root.deleteAccount()
-
-            Button:
-                text: "Delete All Data"
-                on_press: root.deleteAllData()
-            
-            Button:
-                text: "Back"
-                on_press: root.goBack()
