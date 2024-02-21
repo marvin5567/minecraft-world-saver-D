@@ -6,8 +6,8 @@ import shutil
 import hashlib
 import tempfile
 import threading
-import configparser
 from threading import Thread
+from colorama import init, Fore
 
 # database related imports
 from gridfs import GridFS
@@ -32,11 +32,28 @@ from tkinter import filedialog
 
 
 TOKEN = 'mongodb+srv://karimabouelnour2006:Dwad2O3dnTWp9KaZ@minecraftworldsaver.wefidgi.mongodb.net/?retryWrites=true&w=majority'
-image_data = ''
-defImgPath = './resc/images/defaultPFP.jpg'
 
 # Load the KV file
 Builder.load_file("worldsaver.kv")
+
+def printf(output_type, source, message):
+    """
+    Print formatted output with colors and additional information.
+    
+    Args:
+        output_type (str): Type of output (e.g., INFO, ERROR).
+        source (str): Source of the output.
+        message (str): Message to be printed.
+    """
+    output_color = {
+        "INFO": Fore.GREEN,
+        "ERROR": Fore.RED,
+        "WARNING": Fore.YELLOW,
+        # Add more types and colors as needed
+    }.get(output_type, Fore.RESET)  # Default color is RESET if output_type is not recognized
+
+    formatted_output = f"[{output_color}{output_type}{Fore.RESET}] [{source}] {message}"
+    print(formatted_output)
 
 class HomePage(BoxLayout):
     def __init__(self, **kwargs):
@@ -65,11 +82,11 @@ class HomePage(BoxLayout):
         root.destroy()
 
         if directory:
-            print(f"Selected directory: {directory}")
+            printf("INFO","HomePage.selectDirectory",f"Selected directory: {directory}")
             self.defaultDir = directory
             self.displayWorlds()
         else:
-            print("No directory selected")
+            printf("WARNING","HomePage.selectDirectory","No directory selected")
 
     def logoutUser(self):
         # Delete user ID file when logging out
@@ -165,8 +182,8 @@ class HomePage(BoxLayout):
         return grid_layout
     
     def uploadWorld(self, worldName, worldData, currentUserId):
-        print(f"Uploading world: '{worldName}'")
-        print(f"Size: {len(worldData) * 0.000001} MB")
+        printf("INFO","HomePage.uploadWorld",f"Uploading world: '{worldName}'")
+        printf("INFO","HomePage.uploadWorld",f"Size: {len(worldData) * 0.000001} MB")
 
         try:
             # Create a GridFS object
@@ -178,10 +195,14 @@ class HomePage(BoxLayout):
             # Store metadata in the worlds collection
             app.db.worlds.insert_one({'name': worldName, 'file_id': file_id, 'user_id': currentUserId})
             
-            print(f"World '{worldName}' uploaded successfully.")
+            printf("INFO","HomePage.uploadWorld",f"World '{worldName}' uploaded successfully.")
+            
+            popup = Popup(title='World', content=Label(text='World Uploaded Succesfully!'),
+                              size_hint=(None, None), size=(400, 400))
+            popup.open()
 
         except Exception as e:
-            print(f"Error uploading world to GridFS: {e}")
+            printf("ERROR","HomePage.uploadWorld",f"Error uploading world to GridFS: {e}")
             
         self.displayWorlds()
 
@@ -195,26 +216,28 @@ class HomePage(BoxLayout):
         try:
             # make a temp directory
             tempDir = tempfile.mkdtemp()
-            print("packing p1 done")
+            printf("INFO","HomePage.uploadWorld","packing p1 done")
+
             # create a zip archive of the world directory
             tempZipPath = os.path.join(tempDir, worldName + '.zip')
-            print("packing p2 done")
+            printf("INFO","HomePage.uploadWorld","packing p2 done")
+
             shutil.make_archive(tempZipPath[:-4], 'zip', worldPath)
-            print("packing p3 done")
+            printf("INFO","HomePage.uploadWorld","packing p3 done")
+
             # read the zip file as binary data
             with open(tempZipPath, 'rb') as zip_file:
                 zipData = zip_file.read()
-            print("packing p4 done")
+            printf("INFO","HomePage.uploadWorld","packing p4 done")
 
-            # Await the uploadWorld method
+            printf("INFO","HomePage.uploadWorld","Initiating upload sequence")
             self.uploadWorld(worldName, zipData, self.currentUserId)
-            print(f"World '{worldName}' uploaded successfully.")
         except FileNotFoundError:
-            print(f"Error: World file not found at '{worldPath}'")
+            printf("ERROR","HomePage.uploadWorld",f"World file not found at '{worldPath}'")
         except PermissionError:
-            print(f"Error: Permission denied reading world file '{worldPath}'")
+            printf("ERROR","HomePage.uploadWorld",f"Permission denied reading world file '{worldPath}'")
         except Exception as e:
-            print(f"Error reading/world file: {e}")
+            printf("ERROR","HomePage.uploadWorld",f"Error reading/world file: {e}")
         finally:
             # remove the temporary directory
             shutil.rmtree(tempDir, ignore_errors=True)
@@ -232,9 +255,9 @@ class HomePage(BoxLayout):
                 app.root.clear_widgets()
                 app.root.add_widget(world_details_screen)
             else:
-                print(f"Error: Uploaded world data not found for '{worldName}'")
+                printf("ERROR","HomePage.loadUploadedWorld",f"Uploaded world data not found for '{worldName}'")
         except Exception as e:
-            print(f"Error loading uploaded world: {e}")
+            printf("ERROR","Homepage.loadUploadedWorld",f"Error loading uploaded world: {e}")
 
     def switchToSettings(self):
         App.get_running_app().root.clear_widgets()
@@ -278,18 +301,23 @@ class WorldDetailsScreen(BoxLayout):
             # Copy the zip file to the target directory
             shutil.copy(tempZipPath, os.path.join(downloadDir, f"{worldName}.zip"))
 
-            print(f"World '{worldName}' downloaded successfully to {downloadDir}")
-            self.show_popup(f"World '{worldName}' downloaded successfully!")
+            printf("INFO","WorldDetailsScreen.downloadWorld",f"World '{worldName}' downloaded successfully to {downloadDir}")
+            popup = Popup(title='World', content=Label(text='World Downloaded Succesfully!'),
+                              size_hint=(None, None), size=(400, 400))
+            popup.open()
+
+            App.get_running_app().root.clear_widgets()
+            App.get_running_app().root.add_widget(HomePage())
 
         except Exception as e:
-            print(f"Error downloading world: {e}")
+            printf("ERROR","WorldDetailsScreen.downloadWorld",f"Error downloading world: {e}")
 
         finally:
             # Remove the temporary directory
             shutil.rmtree(tempDir, ignore_errors=True)
 
     def deleteWorld(self, worldName):
-        print(f"Deleting world '{self.worldName}'...")
+        printf("INFO","WorldDetailsScreen.deleteWorld",f"Deleting world '{self.worldName}'...")
         try:
             # Retrieve the world document from MongoDB
             worldData = app.db.worlds.find_one({'name': worldName, 'user_id': self.currentUserId})
@@ -307,18 +335,21 @@ class WorldDetailsScreen(BoxLayout):
                 # Delete the world from MongoDB
                 app.db.worlds.delete_one({'name': worldName, 'user_id': self.currentUserId})
 
-                print(f"World '{worldName}' deleted successfully")
+                printf("INFO","WorldDetailsScreen.deleteWorld",f"World '{worldName}' deleted successfully")
                 self.show_popup(f"World '{worldName}' deleted successfully!")
 
+                popup = Popup(title='World', content=Label(text='World Succesfully Deleted'),
+                              size_hint=(None, None), size=(400, 400))
+                popup.open()
                 # Refresh the UI after deleting the world
                 app.root.clear_widgets()
                 app.root.add_widget(HomePage(currentUserId=self.currentUserId))
 
             else:
-                print(f"Error: World data not found for '{worldName}'")
+                printf("ERROR","WorldDetailsScreen.deleteWorld",f"World data not found for '{worldName}'")
 
         except Exception as e:
-            print(f"Error deleting world: {e}")
+            printf("ERROR","WorldDetailsScreen.deleteWorld",f"Error deleting world: {e}")
 
     def goBack(self):
         App.get_running_app().root.clear_widgets()
@@ -340,6 +371,7 @@ class LoginScreen(BoxLayout):
         userExists = app.db.users.find_one({'username': user, 'password': hashedPassword})
 
         if userExists:
+
             # Save user ID to a file
             with open("currentUserId.txt", "w") as file:
                 file.write(str(userExists['_id']))
@@ -361,7 +393,6 @@ class LoginScreen(BoxLayout):
 class SignUpScreen(BoxLayout):
     def __init__(self, **kwargs):
         super(SignUpScreen, self).__init__(**kwargs)
-        self.fs = GridFS(app.db, collection='profile_pictures')
 
     def add_user(self):
         user = self.ids.username.text
@@ -388,7 +419,7 @@ class SignUpScreen(BoxLayout):
                 with open("currentUserId.txt", "w") as file:
                     file.write(str(session['_id']))
 
-                print("User added")
+                printf("INFO","SignUp.addUser","Account Creation Successful")
                 App.get_running_app().root.clear_widgets()
                 App.get_running_app().root.add_widget(HomePage())
             else:
@@ -417,10 +448,10 @@ class SettingsScreen(Screen):
         root.destroy()
 
         if directory:
-            print(f"Selected directory: {directory}")
+            printf("INFO","HomePage.selectDirectory",f"Selected directory: {directory}")
             self.defaultDownloadDir = directory
         else:
-            print("No directory selected")
+            printf("WARNING","HomePage.selectDirectory","No directory selected")
 
     def saveChanges(self):
         if self.ids.theme_color_input.text != '':
@@ -456,17 +487,24 @@ class SettingsScreen(Screen):
         else:
             pass
 
+        popup = Popup(title='Settings', content=Label(text='Changes succesfully changed!'),
+                              size_hint=(None, None), size=(400, 400))
+        popup.open()
+        App.get_running_app().root.clear_widgets()
+        App.get_running_app().root.add_widget(HomePage())
+
     def loadThemeColor(*self):
         # Load data from JSON file
         with open('settings.json', 'r') as file:
             data = json.load(file)
+            printf("INFO","Settings.loadThemeColor",data['themeColor'])
         return data['themeColor']
     
     def loadDownladDir(*self):
         # Load data from JSON file
         with open('settings.json', 'r') as file:
             data = json.load(file)
-            print(data['defaultDownloadsDirectory'])
+            printf("INFO","Settings.loadDownladDir",data['defaultDownloadsDirectory'])
         # Return the font size
         return data['defaultDownloadsDirectory']
     
@@ -517,30 +555,30 @@ class Queue:
         
     def is_empty(self):
         if self.items:
-            print("is empty active")
-            print("Queue length:", len(self.items))  # Print queue length for debugging
-            print("Thread ID:", threading.get_ident())  # Print thread ID for debugging
+            printf("INFO","Queue.is_empty","is empty active")
+            printf("INFO","Queue.is_empty",f'"Queue length:" {len(self.items)}')  # Print queue length for debugging
+            printf("INFO","Queue.is_empty",f'"Thread ID:" {threading.get_ident()}')  # Print thread ID for debugging
         return len(self.items) == 0
     
     def enqueue(self, item):
-        print("enqueue")
+        printf("INFO","Queue.enqueue","enqueue")
         self.items.append(item)
 
     def dequeue(self):
-        print("dequeue")
+        printf("INFO","Queue.dequeue","dequeue")
         if self.items:
             item = self.items.pop(0)
-            print("Queue length:", len(self.items))  # Print queue length for debugging
-            print("Thread ID:", threading.get_ident())  # Print thread ID for debugging
+            printf("INFO","Queue.dequeue",f'"Queue length:" {len(self.items)}')  # Print queue length for debugging
+            printf("INFO","Queue.dequeue",f'"Thread ID:" {threading.get_ident()}')  # Print thread ID for debugging
             return item
 
     def peek(self):
-        print("peek")
+        printf("INFO","Queue.peek","peek")
         if not self.is_empty():
             return self.items[0]
 
     def size(self):
-        print("size")
+        printf("INFO","size","size")
         return len(self.items)
 
 class MainApp(App):
